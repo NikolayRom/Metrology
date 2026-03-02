@@ -10,9 +10,9 @@ GO_KEYWORDS = {
 }
 
 GO_SYMBOLS =[
-    '<<=', '>>=', '&=', '|=', '^=', ':=', '...', '==', '!=', '<=', '>=', '&&', '||', '<-',
-    '++', '--', '+=', '-=', '*=', '/=', '%=', '+', '-', '*', '/', '%', '&', '|', '^', '<<', '>>', 
-    '=', '<', '>', '!', '.'
+    '<<=', '>>=', '&^=', '&=', '|=', '^=', ':=', '...', '==', '!=', '<=', '>=', '&&', '||', '<-',
+    '++', '--', '+=', '-=', '*=', '/=', '%=', '&^', '+', '-', '*', '/', '%', '&', '|', '^', '<<', '>>', 
+    '=', '<', '>', '!', '.', '~', ':'
 ]
 
 def analyze_code():
@@ -37,13 +37,33 @@ def analyze_code():
         operands_count[n] = operands_count.get(n, 0) + 1
         code = re.sub(rf'\b{n}\b', ' ', code, count=1)
 
+    total_ifs = len(re.findall(r'\bif\b', code))
+    else_ifs = len(re.findall(r'\belse\s+if\b', code))
+    actual_ifs = total_ifs - else_ifs
+    
+    if actual_ifs > 0:
+        operators_count['if...else if...else'] = actual_ifs
+
+    switches = len(re.findall(r'\bswitch\b', code))
+    if switches > 0:
+        operators_count['switch...case...default'] = switches
+
+
+    func_names = set(re.findall(r'\b([a-zA-Z_]\w*)\s*\(', code))
+    func_names -= GO_KEYWORDS 
+
     words = re.findall(r'\b[a-zA-Z_]\w*\b', code)
     for word in words:
-        if word in GO_KEYWORDS:
+        if word in['if', 'else', 'switch', 'case', 'default']:
+            continue 
+        elif word in GO_KEYWORDS:
             operators_count[word] = operators_count.get(word, 0) + 1
-        else:
+        elif word in func_names: 
+            operators_count[word] = operators_count.get(word, 0) + 1
+        else: 
             operands_count[word] = operands_count.get(word, 0) + 1
 
+    
     for sym in GO_SYMBOLS:
         count = code.count(sym)
         if count > 0:
